@@ -9,124 +9,144 @@
 
 
 function colide(r1, r2)
-    if rect1.x + rect1.width < rect2.x then return false end
-    if rect1.x > rect2.x + rect2.width then return false end
-    if rect1.y + rect1.height < rect2.y then return false end
-    if rect1.y > rect2.y + rect2.height then return false end
-    return true
+   if rect1.x + rect1.width < rect2.x then return false end
+   if rect1.x > rect2.x + rect2.width then return false end
+   if rect1.y + rect1.height < rect2.y then return false end
+   if rect1.y > rect2.y + rect2.height then return false end
+   return true
 end
 
 function requireNonNullElse(givenValue, defaultValue)
-    if givenValue ~= nil then
-        return givenValue
-    else
-        return defaultValue
-    end
+   if givenValue ~= nil then
+      return givenValue
+   else
+      return defaultValue
+   end
 end
 
 function forEach(tbl, func)
-    for i, v in ipairs(tbl) do
-        func(v, i)
-    end
+   for i, v in ipairs(tbl) do
+      func(v, i)
+   end
 end
 
 
 function createNew(tbl, ...)
-    table.insert(tbl.entity, tbl.create(...))
+   table.insert(tbl.entity, tbl.create(...))
 end
 
 
-Player = {
-    entity = {},
 
-    create = function (x, y)
-        return {
+local Entity = {}
+Entity.__index = Entity
+
+-- Constructor para crear nuevas instancias de Entity
+function Entity:new(methods)
+    local instancia = setmetatable({}, Entity)
+    
+    instancia.__entity = {}
+    instancia.createA = methods.create
+    instancia.updateA = methods.update
+    instancia.drawA = methods.draw
+    trace("PAC2")
+    return instancia
+end
+
+-- Método para crear una nueva entidad y agregarla a la lista de entidades
+function Entity:create(...)
+   local a = self:createA(...)
+   trace("PAC")
+    table.insert(self.__entity, a)
+end
+
+-- Método para actualizar todas las entidades
+function Entity:update()
+    forEach(self.__entity, self.updateA)
+end
+
+-- Método para dibujar todas las entidades
+function Entity:draw()
+    forEach(self.__entity, self.drawA)
+end
+
+
+
+local player = Entity:new(
+   {
+      create = function (self, x, y)
+         trace("Gay")
+         return {
             frame = 0,
             alive = true,
             x = 96 + requireNonNullElse(x, 0) ,
             y = 24 + requireNonNullElse(y, 0)
-        }
-    end,
+         }
+      end,
+      
+      update = function (self)
+         self.frame = 1 + (time()/20)%60 // 30 * 2
 
-    update = function (ins)
-        ins.frame = 1 + (time()/20)%60 // 30 * 2
+         if btn(0) then self.y=self.y-1 end
+         if btn(1) then self.y=self.y+1 end
+         if btn(2) then self.x=self.x-1 end
+         if btn(3) then self.x=self.x+1 end
+      end,
+      
+      draw = function (self)
+         -- no hace nada si esta muerto
+         if not self.alive then return end
 
-	    if btn(0) then ins.y=ins.y-1 end
-	    if btn(1) then ins.y=ins.y+1 end
-	    if btn(2) then ins.x=ins.x-1 end
-	    if btn(3) then ins.x=ins.x+1 end
-
-    end,
-
-    draw = function (ins)
-        -- no hace nada si esta muerto
-        if not ins.alive then return end
-
-        spr(ins.frame,ins.x,ins.y,14,3,0,0,2,2)
-    end,
-
-    kill = function (ins)
-        ins.alive = false
-    end
-} 
+         spr(self.frame,self.x,self.y,14,3,0,0,2,2)
+      end
+   }
+)
 
 
 
 MainScene = {
-	setup = function (self)
-        self.message = "HELLO WORLD!"
-        createNew(Player, 100)
-	end, 
-	
-	update = function (self)
-        forEach(Player.entity, Player.update)
-        if btn(4) then 
-            forEach(Player.entity, Player.kill) 
-        end
-	end,
-	
-	draw = function (self)
-        cls(13)
-        forEach(Player.entity, Player.draw)
-    	print(self.message,84,84)
-	end,
+   setup = function (self)
+      self.message = "HELLO WORLD!"
+      player:create(0,0)
+
+   end, 
+   
+   update = function (self)
+      player:update()
+
+      if btnp(4) then player:create(0,0) end
+   end,
+   
+   draw = function (self)
+      cls(13)
+      player:draw()
+      print(self.message,84,84)
+   end,
 }
 
-
-
-
-
-function Main_Scene()
-    changeScene(MainScene)
-end
-
-function ITEM2()
-    trace("Item 2")
-end
 
 GameMenu={Main_Scene,ITEM2}
 CURRENT_SCENE = nil
 
 function MENU(i)
- GameMenu[i+1]()
+   GameMenu[i+1]()
 end
 
 function changeScene(scene)
-    CURRENT_SCENE = scene
+   CURRENT_SCENE = scene
 end
 
 function startScene(scene)
-    scene:setup()
-    CURRENT_SCENE = scene
+   scene:setup()
+   CURRENT_SCENE = scene
 end
 
 function BOOT() 
-    startScene(MainScene)
+   startScene(MainScene)
 end
 
 function TIC()
-	CURRENT_SCENE:update()
-	CURRENT_SCENE:draw()
+   CURRENT_SCENE:update()
+   CURRENT_SCENE:draw()
 end
 
 -- <TILES>
