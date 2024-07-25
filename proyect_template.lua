@@ -5,8 +5,6 @@
 -- license: MIT License (change this to your license of choice)
 -- version: 0.1
 -- script:  lua
--- menu: Main_Scene ITEM
-
 
 function colide(r1, r2)
    if rect1.x + rect1.width < rect2.x then return false end
@@ -17,68 +15,88 @@ function colide(r1, r2)
 end
 
 function requireNonNullElse(givenValue, defaultValue)
-   if givenValue ~= nil then
-      return givenValue
-   else
-      return defaultValue
-   end
+   if givenValue ~= nil then return givenValue else return defaultValue end
 end
 
 function forEach(tbl, func)
-   for i, v in ipairs(tbl) do
-      func(v, i)
+   for i, v in ipairs(tbl) do func(v, i) end
+end
+
+----- Entity -----
+
+local Entity = {} 
+Entity.__index = Entity
+
+function Entity:new(args)
+   local ins = setmetatable({}, Entity)
+   ins.__entity = {}
+   ins.__create = args.create
+   ins.__update = args.update
+   ins.__draw = args.draw
+   return ins
+end
+
+function Entity:create(...) table.insert(self.__entity, self:__create(...)) end
+function Entity:update() forEach(self.__entity, self.__update) end
+function Entity:draw() forEach(self.__entity, self.__draw) end
+function Entity:delete() self.__entity = {} end
+
+----- Scene -----
+
+local Scene = {}
+Scene.__index = Scene
+
+function Scene:new(args)
+   local ins = setmetatable({}, Scene)
+   ins.__entities = {}
+   ins.__create = args.create
+   ins.__update = args.update
+   ins.__draw = args.draw
+
+   args.preload(ins)
+   
+   return ins
+end
+
+function Scene:registerEntity(entity)
+   table.insert(self.__entities, entity)
+end
+
+function Scene:start()
+   self:__create()
+   TIC = function()
+      self:__update();
+      self:__draw();
    end
 end
 
-
-function createNew(tbl, ...)
-   table.insert(tbl.entity, tbl.create(...))
+function Scene:change(scene)
+   forEach(self.__entities, function(e) e:delete() end)
+   trace("AA")
+   scene:start()
 end
 
 
 
-local Entity = {}
-Entity.__index = Entity
-
--- Constructor para crear nuevas instancias de Entity
-function Entity:new(methods)
-    local instancia = setmetatable({}, Entity)
-    
-    instancia.__entity = {}
-    instancia.createA = methods.create
-    instancia.updateA = methods.update
-    instancia.drawA = methods.draw
-    trace("PAC2")
-    return instancia
-end
-
--- Método para crear una nueva entidad y agregarla a la lista de entidades
-function Entity:create(...)
-   local a = self:createA(...)
-   trace("PAC")
-    table.insert(self.__entity, a)
-end
-
--- Método para actualizar todas las entidades
-function Entity:update()
-    forEach(self.__entity, self.updateA)
-end
-
--- Método para dibujar todas las entidades
-function Entity:draw()
-    forEach(self.__entity, self.drawA)
-end
 
 
 
-local player = Entity:new(
+
+
+
+
+
+
+
+
+
+Player = Entity:new(
    {
       create = function (self, x, y)
-         trace("Gay")
          return {
             frame = 0,
             alive = true,
-            x = 96 + requireNonNullElse(x, 0) ,
+            x = 96 + requireNonNullElse(x, 0),
             y = 24 + requireNonNullElse(y, 0)
          }
       end,
@@ -102,51 +120,54 @@ local player = Entity:new(
 )
 
 
+TestScene = Scene:new(
+   {
+      preload = function(self)
+         self.static = "Static"
+      end,
 
-MainScene = {
-   setup = function (self)
-      self.message = "HELLO WORLD!"
-      player:create(0,0)
+      create = function(self)
+      end,
 
-   end, 
-   
-   update = function (self)
-      player:update()
+      update = function(self)
+         if btnp(5) then self:change(MainScene) end
+      end,
 
-      if btnp(4) then player:create(0,0) end
-   end,
-   
-   draw = function (self)
-      cls(13)
-      player:draw()
-      print(self.message,84,84)
-   end,
-}
+      draw = function(self)
+         print(self.static)
+      end
+   }
+)
 
+MainScene = Scene:new(
+   {
+      preload = function (self)
+         self.message = "HELLO WORLD!"
+         self:registerEntity(player)
+      end,
 
-GameMenu={Main_Scene,ITEM2}
-CURRENT_SCENE = nil
+      create = function (self)
+         player:create(0,0)
+      end,
+      
+      update = function (self)
+         player:update()
 
-function MENU(i)
-   GameMenu[i+1]()
-end
+         if btnp(4) then player:create(0,0) end
+         if btnp(5) then self:change(TestScene) end
+      end,
+      
+      draw = function (self)
+         cls(13)
+         player:draw()
+         print(self.message,84,84)
+      end,
+   }
+)
 
-function changeScene(scene)
-   CURRENT_SCENE = scene
-end
-
-function startScene(scene)
-   scene:setup()
-   CURRENT_SCENE = scene
-end
-
-function BOOT() 
-   startScene(MainScene)
-end
 
 function TIC()
-   CURRENT_SCENE:update()
-   CURRENT_SCENE:draw()
+   MainScene:start()
 end
 
 -- <TILES>
