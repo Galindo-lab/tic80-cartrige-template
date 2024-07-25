@@ -6,6 +6,22 @@
 -- version: 0.1
 -- script:  lua
 
+----- Lenguaje extensions -----
+
+function requireNonNullElse(givenValue, defaultValue)
+   if givenValue ~= nil then
+      return givenValue
+   end
+   
+   return defaultValue
+end
+
+function forEach(tbl, func)
+   for i, v in ipairs(tbl) do func(v, i) end
+end
+
+----- Math -----
+
 function colide(r1, r2)
    if rect1.x + rect1.width < rect2.x then return false end
    if rect1.x > rect2.x + rect2.width then return false end
@@ -14,16 +30,7 @@ function colide(r1, r2)
    return true
 end
 
-function requireNonNullElse(givenValue, defaultValue)
-   if givenValue ~= nil then return givenValue else return defaultValue end
-end
-
-function forEach(tbl, func)
-   for i, v in ipairs(tbl) do func(v, i) end
-end
-
 ----- Entity -----
-
 local Entity = {} 
 Entity.__index = Entity
 
@@ -42,7 +49,6 @@ function Entity:draw() forEach(self.__entity, self.__draw) end
 function Entity:delete() self.__entity = {} end
 
 ----- Scene -----
-
 local Scene = {}
 Scene.__index = Scene
 
@@ -52,9 +58,7 @@ function Scene:new(args)
    ins.__create = args.create
    ins.__update = args.update
    ins.__draw = args.draw
-
    args.preload(ins)
-   
    return ins
 end
 
@@ -64,15 +68,11 @@ end
 
 function Scene:start()
    self:__create()
-   TIC = function()
-      self:__update();
-      self:__draw();
-   end
+   TIC = function() self:__update(); self:__draw(); end
 end
 
 function Scene:change(scene)
    forEach(self.__entities, function(e) e:delete() end)
-   trace("AA")
    scene:start()
 end
 
@@ -90,7 +90,7 @@ end
 
 
 
-Player = Entity:new(
+player = Entity:new(
    {
       create = function (self, x, y)
          return {
